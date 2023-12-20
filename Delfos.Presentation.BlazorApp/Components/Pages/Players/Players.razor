@@ -1,20 +1,20 @@
 ﻿@page "/players"
-@using Delfos.Domain.Entities
+@inject IHttpClientFactory ClientFactory
+@rendermode InteractiveServer
 
+@using Delfos.Aplication.Service.Request
+@using Delfos.Domain.Entities
 @using System.Text.Json
 @using Delfos.Aplication.Service.Response
-@using Delfos.Domain.Entities
 @using System.Text.Json.Serialization
-@inject IHttpClientFactory ClientFactory
+@using System.Text
 
-
-@rendermode InteractiveServer
 
 <h3>Players</h3>
 
-<a class="btn btn-primary" href="/Players/create" role="button">Link</a>
+<a class="btn btn-primary" href="/Players/create" role="button">Create Player</a>
 
-@if (players == null)
+@if (playerDto == null)
 {
     <p><em>Loading...</em></p>
 }
@@ -33,19 +33,18 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var player in players)
+            @foreach (var player in playerDto)
             {
                 <tr>
                     <td>@player.Id</td>
                     <td>@player.Name</td>
 
-                    <button @onclick=CreatePlayer>
-                        <a>Todo</a>
-                    </button>
 
-                    <a class="btn btn-primary" href="/Players/create" role="button">Create</a>
-                    <a class="btn btn-primary" href="/Players/create" role="button">Update</a>
-                    <a class="btn btn-primary" href="/Players/create" role="button">Delete</a>
+                    <a class="btn btn-primary" href="/Players/Update" role="button">Update</a>
+
+                    <button class="btn btn-primary" @onclick="(() => DeletePlayer(player))">
+                        <a>Delete</a>
+                    </button>
                 </tr>
             }
         </tbody>
@@ -53,9 +52,10 @@ else
 }
 
 @code {
-    private List<PlayerDto>? players;
+    private List<PlayerDto>? playerDto;
     private bool getPlayersError;
     private string getPlayersMessageErrors;
+    private PlayerResponse response;
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,18 +64,56 @@ else
 
     }
 
-    public void CreatePlayer()
-    {
-        
-    }
-    public void UpdatePlayer(PlayerDto dto)
+    public async Task UpdatePlayer(PlayerDto dto)
     {
 
     }
-    public void DeletePlayer(PlayerDto dto)
+    public async Task DeletePlayer(PlayerDto dto)
     {
+         try
+            {
+                var client = ClientFactory.CreateClient();
 
+                // Prepare your data to be sent
+
+                PlayerRequest playerRequest = new PlayerRequest(new List<PlayerDto> { dto });
+
+                // Serialize the object to JSON
+                var json = JsonSerializer.Serialize(playerRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var request = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Delete,
+                        RequestUri = new Uri("https://localhost:7195/api/Player/Delete"),
+                        Content = content
+                    };
+
+                var httpResponse = await client.SendAsync(request);
+
+                if (httpResponse.IsSuccessStatusCode)
+                {
+                    var playersStream = await httpResponse.Content.ReadAsStringAsync();
+                    response = JsonSerializer.Deserialize<PlayerResponse>(playersStream);
+
+                    // Process your response as needed
+                    // players = playersResponse.PlayerEntitie;
+                }
+                else
+                {
+                    // Handle the error response if needed
+                }
+
+                await GetAll();
+            }
+            catch (HttpRequestException ex)
+            {
+                //getPlayersError = true;
+                response.Message = $"HTTP request error: {ex}";
+                // Log detalhes usando um logger
+            }
     }
+
     public async Task GetAll()
     {
         try
@@ -90,7 +128,7 @@ else
 
             var playersResponse = JsonSerializer.Deserialize<PlayerResponse>(playersStream);
 
-            players = playersResponse.PlayerEntitie;
+            playerDto = playersResponse.PlayerEntitie;
 
         }
         catch (HttpRequestException ex)
