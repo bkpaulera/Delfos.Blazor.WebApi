@@ -1,0 +1,69 @@
+﻿@using Delfos.Domain.Entities
+
+@attribute [StreamRendering]
+
+@using System.Text.Json
+@using Delfos.Aplication.Service.Response
+@using Delfos.Domain.Entities
+@using System.Text.Json.Serialization
+@inject IHttpClientFactory ClientFactory
+
+<PageTitle>PlayersList</PageTitle>
+
+<h1>PlayersList</h1>
+
+<table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var players in players)
+            {
+                <tr>
+                    <td>@players.Id</td>
+                    <td>@players.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+@code {
+
+    private List<PlayerDto>? players;
+    private bool getPlayersError;
+    private string getPlayersMessageErrors;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://localhost:7195/api/Player/GetAll");
+
+            var client = ClientFactory.CreateClient();
+
+            var httpResponse = await client.SendAsync(request);
+
+            var playersStream = await httpResponse.Content.ReadAsStringAsync();
+
+            var playersResponse = JsonSerializer.Deserialize<PlayerResponse>(playersStream);
+
+            players = playersResponse.PlayerEntitie;
+
+        }
+        catch (HttpRequestException ex)
+        {
+            getPlayersError = true;
+            getPlayersMessageErrors = $"HTTP request error: {ex}";
+            // Log detalhes usando um logger
+        }
+        catch (JsonException ex)
+        {
+            getPlayersError = true;
+            getPlayersMessageErrors = $"JSON deserialization error: {ex}";
+            // Log detalhes usando um logger
+        }
+    }
+}

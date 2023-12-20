@@ -1,0 +1,99 @@
+﻿@page "/players/create"
+@rendermode InteractiveServer
+
+@inject IHttpClientFactory ClientFactory
+
+@using Delfos.Aplication.Service.Request
+@using Delfos.Domain.Entities
+@using System.Text.Json.Serialization
+@using System.Text.Json
+@using Delfos.Aplication.Service.Response
+@using System.Text
+
+<h3>Create User</h3>
+
+
+<input placeholder="Nome" @bind="playerDto.Name" />
+
+<button @onclick="(() => CreateUser())">Criar usuario</button>
+
+@if (getPlayersStatus != null)
+{
+    <h2>@getPlayersStatus</h2>
+}
+
+
+@if (response != null)
+{
+    <h3>Usuario Criado</h3>
+    <h2>@response.PlayerEntitie[0].Name</h2>
+    <h2>@response.PlayerEntitie[0].Id</h2>
+    <h2>@response.Message</h2>
+}
+
+
+
+@code {
+
+    private PlayerDto? playerDto = new();
+    private string getPlayersMessageErrors;
+    private string getPlayersStatus;
+    private PlayerResponse response;
+
+
+    private async Task CreateUser()
+    {
+        if (!string.IsNullOrWhiteSpace(playerDto.Name))
+        {
+
+            try
+            {
+                var client = ClientFactory.CreateClient();
+
+                // Prepare your data to be sent
+
+                PlayerRequest playerRequest = new PlayerRequest(new List<PlayerDto> { playerDto });
+
+                // Serialize the object to JSON
+                var json = JsonSerializer.Serialize(playerRequest);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                // Make the POST request
+                var httpResponse = await client.PostAsync("https://localhost:7195/api/Player/Create", content);
+
+                if (httpResponse.IsSuccessStatusCode)
+                {
+                    var playersStream = await httpResponse.Content.ReadAsStringAsync();
+                    response = JsonSerializer.Deserialize<PlayerResponse>(playersStream);
+
+                    // Process your response as needed
+                    // players = playersResponse.PlayerEntitie;
+                }
+                else
+                {
+                    // Handle the error response if needed
+                }
+
+
+            }
+            catch (HttpRequestException ex)
+            {
+                //getPlayersError = true;
+                response.Message = $"HTTP request error: {ex}";
+                // Log detalhes usando um logger
+            }
+            catch (JsonException ex)
+            {
+                //getPlayersError = true;
+                response.Message = $"JSON deserialization error: {ex}";
+                //Log detalhes usando um logger
+            }
+        }
+        else
+        {
+            getPlayersStatus = "Ops Algo deu errado verifique o usuario";
+        }
+    }
+
+    
+}

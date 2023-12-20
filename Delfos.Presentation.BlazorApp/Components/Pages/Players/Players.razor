@@ -1,0 +1,109 @@
+﻿@page "/players"
+@using Delfos.Domain.Entities
+
+@using System.Text.Json
+@using Delfos.Aplication.Service.Response
+@using Delfos.Domain.Entities
+@using System.Text.Json.Serialization
+@inject IHttpClientFactory ClientFactory
+
+
+@rendermode InteractiveServer
+
+<h3>Players</h3>
+
+<a class="btn btn-primary" href="/Players/create" role="button">Link</a>
+
+@if (players == null)
+{
+    <p><em>Loading...</em></p>
+}
+
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <tr>
+                    <td>Id</td>
+                    <td>Name</td>
+                    <rd></rd>
+
+                </tr>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var player in players)
+            {
+                <tr>
+                    <td>@player.Id</td>
+                    <td>@player.Name</td>
+
+                    <button @onclick=CreatePlayer>
+                        <a>Todo</a>
+                    </button>
+
+                    <a class="btn btn-primary" href="/Players/create" role="button">Create</a>
+                    <a class="btn btn-primary" href="/Players/create" role="button">Update</a>
+                    <a class="btn btn-primary" href="/Players/create" role="button">Delete</a>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<PlayerDto>? players;
+    private bool getPlayersError;
+    private string getPlayersMessageErrors;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await GetAll();
+
+    }
+
+    public void CreatePlayer()
+    {
+        
+    }
+    public void UpdatePlayer(PlayerDto dto)
+    {
+
+    }
+    public void DeletePlayer(PlayerDto dto)
+    {
+
+    }
+    public async Task GetAll()
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://localhost:7195/api/Player/GetAll");
+
+            var client = ClientFactory.CreateClient();
+
+            var httpResponse = await client.SendAsync(request);
+
+            var playersStream = await httpResponse.Content.ReadAsStringAsync();
+
+            var playersResponse = JsonSerializer.Deserialize<PlayerResponse>(playersStream);
+
+            players = playersResponse.PlayerEntitie;
+
+        }
+        catch (HttpRequestException ex)
+        {
+            getPlayersError = true;
+            getPlayersMessageErrors = $"HTTP request error: {ex}";
+            // Log detalhes usando um logger
+        }
+        catch (JsonException ex)
+        {
+            getPlayersError = true;
+            getPlayersMessageErrors = $"JSON deserialization error: {ex}";
+            // Log detalhes usando um logger
+        }
+    }
+}
